@@ -19,13 +19,15 @@ class BaseDescriptorModel(BaseModel):
     description: Optional[str] = None
 
 
-TeamModel = type("TeamModel", (BaseDescriptorModel,), dict(__tablename__="teams"))
-ProjectModel = type(
-    "ProjectModel", (BaseDescriptorModel,), dict(__tablename__="projects")
-)
+class TeamModel(BaseDescriptorModel, table=True):
+    pass
 
 
-class UserModel(BaseModel):
+class ProjectModel(BaseDescriptorModel, table=True):
+    pass
+
+
+class UserModel(BaseModel, table=True):
     name: str
     email: str
     last_login: datetime = None
@@ -35,27 +37,32 @@ class UserModel(BaseModel):
         orm_mode = True
 
 
-class RoleModel(BaseDescriptorModel):
+class RoleModel(BaseDescriptorModel, table=True):
     short_name: Optional[str] = None
     external_roles: Optional[str] = None
 
 
-class LinkUserToTeamModel(BaseModel):
+class LinkUserToTeamModel(BaseModel, table=True):
     user_id: int = Field(default=None, foreign_key="users.id")
     team_id: int = Field(default=None, foreign_key="teams.id")
     role_id: Optional[int] = Field(default=None, foreign_key="roles.id")
 
 
-class LinkProjectToTeamModel(BaseModel):
+class LinkProjectToTeamModel(BaseModel, table=True):
     project_id: int = Field(default=None, foreign_key="projects.id")
     team_id: int = Field(default=None, foreign_key="teams.id")
 
 
-FailureModel = type(
-    "FailureModel", (BaseDescriptorModel,), dict(__tablename__="failures")
-)
-CauseModel = type("CauseModel", (BaseDescriptorModel,), dict(__tablename__="causes"))
-EffectModel = type("EffectModel", (BaseDescriptorModel,), dict(__tablename__="effects"))
+class FailureModel(BaseDescriptorModel, table=True):
+    pass
+
+
+class CauseModel(BaseDescriptorModel, table=True):
+    pass
+
+
+class EffectModel(BaseDescriptorModel, table=True):
+    pass
 
 
 class BaseRankModel(BaseModel):
@@ -68,13 +75,17 @@ class BaseRankModel(BaseModel):
         orm_mode = True
 
 
-SeverityModel = type(
-    "SeverityModel", (BaseRankModel,), dict(__tablename__="severities")
-)
-LikelihoodModel = type(
-    "LikelihoodModel", (BaseRankModel,), dict(__tablename__="likelihoods")
-)
-DetectionModel = type(
-    "DetectionModel", (BaseRankModel,), dict(__tablename__="detections")
-)
-ImpactModel = type("ImpactModel", (BaseRankModel,), dict(__tablename__="impacts"))
+class SeverityModel(BaseRankModel, table=True):
+    pass
+
+
+class LikelihoodModel(BaseRankModel, table=True):
+    pass
+
+
+class DetectionModel(BaseRankModel, table=True):
+    pass
+
+
+class ImpactModel(BaseRankModel, table=True):
+    pass
