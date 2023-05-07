@@ -1,0 +1,24 @@
+[tool.poetry]
+name = "failsafe-central"
+version = "0.1.0"
+description = "Full-stack application that provides tools and a data model for conducting and maintaining Failure Modes and Effects Analysis (FMEA)."
+authors = ["Christopher Regnier <christopher.regnier@gmail.com>"]
+license = "Apache"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+pydantic = "^1.10.7"
+aiosqlite = "^0.19.0"
+sqlmodel = "^0.0.8"
+
+[tool.poetry.dev-dependencies]
+pytest = "^7.3.1"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = ["--cov=failsafe_central", "--cov-report=term-missing"]
+module_paths = ["src"]
