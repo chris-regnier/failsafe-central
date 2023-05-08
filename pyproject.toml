@@ -1,3 +1,7 @@
+[project]
+name = "failsafe-central"
+source = "src"
+
 [tool.poetry]
 name = "failsafe-central"
 version = "0.1.0"
@@ -14,12 +18,12 @@ fastapi = "^0.95.1"
 
 [tool.poetry.dev-dependencies]
 pytest = "^7.3.1"
+httpx = "^0.24.0"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
 
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = ["--cov=failsafe_central", "--cov-report=term-missing"]
-module_paths = ["src"]

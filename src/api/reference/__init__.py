@@ -3,26 +3,26 @@ from typing import Optional
 from fastapi import APIRouter
 from sqlmodel import Session
 
-from src.models import DetectionModel, ImpactModel, LikelihoodModel, SeverityModel
+from src.models import Detection, Impact, Likelihood, Severity
 from .. import engine
 
 ReferenceRouter = APIRouter()
 
 
 __REFERENCE_MODELS__ = {
-    SeverityModel.__tablename__: SeverityModel,
-    LikelihoodModel.__tablename__: LikelihoodModel,
-    DetectionModel.__tablename__: DetectionModel,
-    ImpactModel.__tablename__: ImpactModel,
+    Severity.__tablename__: Severity,
+    Likelihood.__tablename__: Likelihood,
+    Detection.__tablename__: Detection,
+    Impact.__tablename__: Impact,
 }
 
 
 @ReferenceRouter.get("/{severities}")
 async def get_severities(name: Optional[str] = None):
     with Session(engine) as session:
-        query = session.query(SeverityModel)
+        query = session.query(Severity)
         if name:
-            query = query.filter(SeverityModel.name == name)
+            query = query.filter(Severity.name == name)
         severities = query.all()
         return severities
 
@@ -30,12 +30,12 @@ async def get_severities(name: Optional[str] = None):
 @ReferenceRouter.get("/severities/{severity_id}")
 async def get_severity(severity_id: int):
     with Session(engine) as session:
-        severity = session.get(SeverityModel, severity_id)
+        severity = session.get(Severity, severity_id)
         return severity
 
 
 @ReferenceRouter.post("/severities")
-async def create_severity(severity: SeverityModel):
+async def create_severity(severity: Severity):
     with Session(engine) as session:
         session.add(severity)
         session.commit()
@@ -44,9 +44,9 @@ async def create_severity(severity: SeverityModel):
 
 
 @ReferenceRouter.put("/severities/{severity_id}")
-async def update_severity(severity_id: int, severity: SeverityModel):
+async def update_severity(severity_id: int, severity: Severity):
     with Session(engine) as session:
-        existing_severity = session.get(SeverityModel, severity_id)
+        existing_severity = session.get(Severity, severity_id)
         if existing_severity:
             session.update(severity)
             session.commit()
@@ -58,7 +58,7 @@ async def update_severity(severity_id: int, severity: SeverityModel):
 @ReferenceRouter.delete("/severities/{severity_id}")
 async def delete_severity(severity_id: int):
     with Session(engine) as session:
-        severity = session.get(SeverityModel, severity_id)
+        severity = session.get(Severity, severity_id)
         if severity:
             severity.deleted_at = datetime.utcnow()
             session.update(severity)

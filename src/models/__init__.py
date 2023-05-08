@@ -1,14 +1,13 @@
 from datetime import datetime
 from typing import Optional
 from pydantic import Field
-from sqlmodel import SQLModel
+from sqlmodel import Relationship, SQLModel
 
 
 class BaseModel(SQLModel):
-    id: Optional[int] = Field(default=None, primary_key=True)
     created_at: datetime
-    updated_at: datetime = None
-    deleted_at: datetime = None
+    updated_at: Optional[datetime] = None
+    deleted_at: Optional[datetime] = None
 
     class Config:
         orm_mode = True
@@ -19,15 +18,16 @@ class BaseDescriptorModel(BaseModel):
     description: Optional[str] = None
 
 
-class TeamModel(BaseDescriptorModel, table=True):
-    pass
+class Team(BaseDescriptorModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True, index=True)
 
 
-class ProjectModel(BaseDescriptorModel, table=True):
-    pass
+class Project(BaseDescriptorModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True, index=True)
 
 
-class UserModel(BaseModel, table=True):
+class User(BaseModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True, index=True)
     name: str
     email: str
     last_login: datetime = None
@@ -37,32 +37,35 @@ class UserModel(BaseModel, table=True):
         orm_mode = True
 
 
-class RoleModel(BaseDescriptorModel, table=True):
+class Role(BaseDescriptorModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True, index=True)
     short_name: Optional[str] = None
     external_roles: Optional[str] = None
 
 
-class LinkUserToTeamModel(BaseModel, table=True):
+class UserTeamLink(BaseModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True, index=True)
     user_id: int = Field(default=None, foreign_key="users.id")
     team_id: int = Field(default=None, foreign_key="teams.id")
     role_id: Optional[int] = Field(default=None, foreign_key="roles.id")
 
 
-class LinkProjectToTeamModel(BaseModel, table=True):
+class ProjectTeamLink(BaseModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True, index=True)
     project_id: int = Field(default=None, foreign_key="projects.id")
     team_id: int = Field(default=None, foreign_key="teams.id")
 
 
-class FailureModel(BaseDescriptorModel, table=True):
-    pass
+class Failure(BaseDescriptorModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True, index=True)
 
 
-class CauseModel(BaseDescriptorModel, table=True):
-    pass
+class Cause(BaseDescriptorModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True, index=True)
 
 
-class EffectModel(BaseDescriptorModel, table=True):
-    pass
+class Effect(BaseDescriptorModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True, index=True)
 
 
 class BaseRankModel(BaseModel):
@@ -75,17 +78,17 @@ class BaseRankModel(BaseModel):
         orm_mode = True
 
 
-class SeverityModel(BaseRankModel, table=True):
-    pass
+class Severity(BaseRankModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True, index=True)
 
 
-class LikelihoodModel(BaseRankModel, table=True):
-    pass
+class Likelihood(BaseRankModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True, index=True)
 
 
-class DetectionModel(BaseRankModel, table=True):
-    pass
+class Detection(BaseRankModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True, index=True)
 
 
-class ImpactModel(BaseRankModel, table=True):
-    pass
+class Impact(BaseRankModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True, index=True)
