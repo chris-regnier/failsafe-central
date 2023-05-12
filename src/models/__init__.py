@@ -1,7 +1,6 @@
 from datetime import datetime
 from typing import Optional
-from pydantic import Field
-from sqlmodel import Relationship, SQLModel
+from sqlmodel import Field, Relationship, SQLModel
 
 
 class BaseModel(SQLModel):
@@ -45,15 +44,15 @@ class Role(BaseDescriptorModel, table=True):
 
 class UserTeamLink(BaseModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True, index=True)
-    user_id: int = Field(default=None, foreign_key="users.id")
-    team_id: int = Field(default=None, foreign_key="teams.id")
-    role_id: Optional[int] = Field(default=None, foreign_key="roles.id")
+    user_id: int = Field(default=None, foreign_key="user.id")
+    team_id: int = Field(default=None, foreign_key="team.id")
+    role_id: Optional[int] = Field(default=None, foreign_key="role.id")
 
 
 class ProjectTeamLink(BaseModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True, index=True)
-    project_id: int = Field(default=None, foreign_key="projects.id")
-    team_id: int = Field(default=None, foreign_key="teams.id")
+    project_id: int = Field(default=None, foreign_key="project.id")
+    team_id: int = Field(default=None, foreign_key="team.id")
 
 
 class Failure(BaseDescriptorModel, table=True):
