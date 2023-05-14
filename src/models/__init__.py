@@ -1,11 +1,11 @@
 from datetime import datetime
-from typing import Optional
+from typing import List, Optional
 from sqlmodel import Field, Relationship, SQLModel
 
 
 class BaseModel(SQLModel):
-    created_at: datetime
-    updated_at: Optional[datetime] = None
+    created_at: datetime = Field(default_factory=datetime.now)
+    updated_at: Optional[datetime] = Field(default_factory=datetime.now)
     deleted_at: Optional[datetime] = None
 
     class Config:
@@ -72,9 +72,6 @@ class BaseRankModel(BaseModel):
     description: str
     value: int
     example: str
-
-    class Config:
-        orm_mode = True
 
 
 class Severity(BaseRankModel, table=True):

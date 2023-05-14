@@ -150,6 +150,14 @@ optional = false
 python-versions = ">=3.5"
 
 [[package]]
+name = "inflection"
+version = "0.5.1"
+description = "A port of Ruby on Rails inflector to Python"
+category = "main"
+optional = false
+python-versions = ">=3.5"
+
+[[package]]
 name = "iniconfig"
 version = "2.0.0"
 description = "brain-dead simple config-ini parsing"
@@ -323,7 +331,7 @@ standard = ["colorama (>=0.4)", "httptools (>=0.5.0)", "python-dotenv (>=0.13)",
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.10"
-content-hash = "9292340ca60759e2ff324d79cb257c69b4630e406df07951d86fa5185724bd32"
+content-hash = "9a440c83e2eae9bb25654f0844cb9f46ed006ec5df1c1968ed9d7d743d12b219"
 
 [metadata.files]
 aiosqlite = []
@@ -338,6 +346,7 @@ h11 = []
 httpcore = []
 httpx = []
 idna = []
+inflection = []
 iniconfig = []
 packaging = []
 pluggy = [

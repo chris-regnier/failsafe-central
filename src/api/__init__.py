@@ -1,14 +1,22 @@
 import inspect
 from datetime import datetime
-from types import FunctionType
 from typing import Iterable, List
 
-from fastapi import Depends, FastAPI
-from fastapi.routing import APIRouter
+from fastapi import Depends
+from fastapi.routing import APIRoute, APIRouter
+from inflection import pluralize
 from sqlmodel import Session
 
 from ..db import get_db
 from ..models import BaseModel
+
+
+def custom_generate_unique_id(route: APIRoute):
+    parts = [route.name]
+    parts.extend(route.methods)
+    parts.extend(route.tags)
+
+    return "_".join(parts)
 
 
 class CollectionsAPIRouter(APIRouter):
@@ -19,7 +27,7 @@ class CollectionsAPIRouter(APIRouter):
             self.add_collection(collection)
 
     def add_collection(self, collection: BaseModel):
-        collection_name = collection.__tablename__
+        collection_name = pluralize(collection.__tablename__)
         self.add_api_route(
             f"/{collection_name}/",
             self._collection_get(collection),
@@ -29,6 +37,7 @@ class CollectionsAPIRouter(APIRouter):
             summary=f"Get all {collection_name}",
             description=f"Get all {collection_name}",
             tags=[f"{collection_name}"],
+            generate_unique_id_function=custom_generate_unique_id,
         )
         self.add_api_route(
             f"/{collection_name}/{{id_}}",
@@ -39,17 +48,19 @@ class CollectionsAPIRouter(APIRouter):
             summary=f"Get {collection_name} by id",
             description=f"Get {collection_name} by id",
             tags=[f"{collection_name}"],
+            generate_unique_id_function=custom_generate_unique_id,
         )
-        # self.add_api_route(
-        #     f"/{collection_name}/",
-        #     self._collection_create(collection),
-        #     methods=["POST"],
-        #     response_model=collection,
-        #     status_code=201,
-        #     summary=f"Create {collection_name}",
-        #     description=f"Create {collection_name}",
-        #     tags=[f"{collection_name}"],
-        # )
+        self.add_api_route(
+            f"/{collection_name}/",
+            self._collection_create(collection),
+            methods=["POST"],
+            # response_model=collection,
+            status_code=201,
+            summary=f"Create {collection_name}",
+            description=f"Create {collection_name}",
+            tags=[f"{collection_name}"],
+            generate_unique_id_function=custom_generate_unique_id,
+        )
         # self.add_api_route(
         #     f"/{collection_name}/{{id_}}",
         #     self._collection_update(collection, is_replace=True),
@@ -125,28 +136,33 @@ class CollectionsAPIRouter(APIRouter):
         return get_resource
 
     def _collection_create(self, collection: BaseModel):
-        collection_type = type(collection)
         params = [
             inspect.Parameter(
                 collection.__tablename__,
-                inspect.Parameter.POSITIONAL_OR_KEYWORD,
-                annotation=collection_type,
+                inspect.Parameter.KEYWORD_ONLY,
+                annotation=collection,
             ),
             inspect.Parameter(
                 "db",
-                inspect.Parameter.POSITIONAL_OR_KEYWORD,
+                inspect.Parameter.KEYWORD_ONLY,
                 annotation=Session,
                 default=Depends(get_db),
             ),
         ]
         sig = inspect.Signature(parameters=params)
+        print(sig)
 
-        async def _base_create_resource(
-            resource: collection_type, db: Session = Depends(get_db)
-        ):
+        async def _base_create_resource(**kwargs):
+            # put controls on the function the old fashioned way
+            if len(kwargs) > 2:
+                raise ValueError(
+                    f"_base_create_resource only accepts two keyword arguments"
+                )
+            db = kwargs.pop("db")
+            resource = list(dict.values(kwargs))[0]
             db.add(resource)
             db.commit()
-            # db.refresh(resource)
+            db.refresh(resource)
             return resource
 
         _base_create_resource.__signature__ = sig
@@ -155,7 +171,6 @@ class CollectionsAPIRouter(APIRouter):
         return _base_create_resource
 
     def _collection_update(self, collection: BaseModel, is_replace: bool = False):
-        collection_type = type(collection)
         params = [
             inspect.Parameter(
                 "id_", inspect.Parameter.POSITIONAL_OR_KEYWORD, annotation=int
@@ -163,7 +178,7 @@ class CollectionsAPIRouter(APIRouter):
             inspect.Parameter(
                 collection.__tablename__,
                 inspect.Parameter.POSITIONAL_OR_KEYWORD,
-                annotation=collection_type,
+                annotation=collection,
             ),
             inspect.Parameter(
                 "db",
@@ -175,7 +190,7 @@ class CollectionsAPIRouter(APIRouter):
         sig = inspect.Signature(parameters=params)
 
         async def _base_update_resource(
-            id_: int, resource: collection_type, db: Session = Depends(get_db)
+            id_: int, resource: collection, db: Session = Depends(get_db)
         ):
             existing_resource = db.get(collection, id_)
             if existing_resource:
@@ -187,7 +202,7 @@ class CollectionsAPIRouter(APIRouter):
                 db.commit()
                 # session.refresh(resource)
                 return resource
-            raise ValueError(f"{collection_type} with id {id_} not found")
+            raise ValueError(f"{collection} with id {id_} not found")
 
         _base_update_resource.__signature__ = sig
         _base_update_resource.__name__ = f"update_{collection.__tablename__}"
