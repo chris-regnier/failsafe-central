@@ -2,9 +2,9 @@ import inspect
 from datetime import datetime
 from typing import Iterable, List
 
-from fastapi import Depends
+from fastapi import Depends, HTTPException
 from fastapi.routing import APIRoute, APIRouter
-from inflection import pluralize
+from inflection import dasherize, pluralize, singularize
 from sqlmodel import Session
 
 from ..db import get_db
@@ -27,17 +27,19 @@ class CollectionsAPIRouter(APIRouter):
             self.add_collection(collection)
 
     def add_collection(self, collection: BaseModel):
-        collection_name = pluralize(collection.__tablename__)
+        collection_name = dasherize(collection.__tablename__)
+        plural_name = pluralize(collection.__name__)
+        single_name = collection.__name__
         self.add_api_route(
             f"/{collection_name}/",
             self._collection_get(collection),
             methods=["GET"],
             response_model=List[collection],
             status_code=200,
-            summary=f"Get all {collection_name}",
-            description=f"Get all {collection_name}",
-            tags=[f"{collection_name}"],
-            generate_unique_id_function=custom_generate_unique_id,
+            summary=f"Get all {plural_name}",
+            description=f"Get all {plural_name}",
+            tags=[collection_name],
+            # generate_unique_id_function=custom_generate_unique_id,
         )
         self.add_api_route(
             f"/{collection_name}/{{id_}}",
@@ -45,50 +47,51 @@ class CollectionsAPIRouter(APIRouter):
             methods=["GET"],
             response_model=collection,
             status_code=200,
-            summary=f"Get {collection_name} by id",
-            description=f"Get {collection_name} by id",
-            tags=[f"{collection_name}"],
-            generate_unique_id_function=custom_generate_unique_id,
+            summary=f"Get {single_name} by id",
+            description=f"Get {single_name} by id",
+            tags=[collection_name],
+            # generate_unique_id_function=custom_generate_unique_id,
         )
         self.add_api_route(
             f"/{collection_name}/",
             self._collection_create(collection),
             methods=["POST"],
-            # response_model=collection,
+            response_model=collection,
             status_code=201,
-            summary=f"Create {collection_name}",
-            description=f"Create {collection_name}",
-            tags=[f"{collection_name}"],
-            generate_unique_id_function=custom_generate_unique_id,
+            summary=f"Create {single_name}",
+            description=f"Create {single_name}",
+            tags=[collection_name],
+            # generate_unique_id_function=custom_generate_unique_id,
         )
-        # self.add_api_route(
-        #     f"/{collection_name}/{{id_}}",
-        #     self._collection_update(collection, is_replace=True),
-        #     methods=["PUT"],
-        #     response_model=collection,
-        #     status_code=200,
-        #     summary=f"Replace {collection_name} at id",
-        #     description=f"Replace {collection_name} at id",
-        #     tags=[f"{collection_name}"],
-        # )
-        # self.add_api_route(
-        #     f"/{collection_name}/{{id_}}",
-        #     self._collection_update(collection, is_replace=False),
-        #     methods=["PATCH"],
-        #     response_model=collection,
-        #     status_code=200,
-        #     summary=f"Update {collection_name} at id",
-        #     description=f"Update {collection_name} at id",
-        #     tags=[f"{collection_name}"],
-        # )
-        # self.add_api_route(
-        #     f"/{collection_name}/{{id_}}",
-        #     self._collection_delete(collection),
-        #     methods=["DELETE"],
-        #     status_code=204,
-        #     summary=f"Delete {collection_name} at id",
-        #     description=f"Delete {collection_name} at id",
-        # )
+        self.add_api_route(
+            f"/{collection_name}/{{id_}}",
+            self._collection_update(collection, is_replace=True),
+            methods=["PUT"],
+            response_model=collection,
+            status_code=200,
+            summary=f"Replace {single_name} at id",
+            description=f"Replace {single_name} at id",
+            tags=[collection_name],
+        )
+        self.add_api_route(
+            f"/{collection_name}/{{id_}}",
+            self._collection_update(collection, is_replace=False),
+            methods=["PATCH"],
+            response_model=collection,
+            status_code=200,
+            summary=f"Update {single_name} at id",
+            description=f"Update {single_name} at id",
+            tags=[collection_name],
+        )
+        self.add_api_route(
+            f"/{collection_name}/{{id_}}",
+            self._collection_delete(collection),
+            methods=["DELETE"],
+            status_code=204,
+            summary=f"Delete {single_name} at id",
+            description=f"Delete {single_name} at id",
+            tags=[collection_name],
+        )
 
     def _collection_get(self, collection: BaseModel):
         arg_dict = {name: field.type_ for name, field in collection.__fields__.items()}
@@ -116,7 +119,11 @@ class CollectionsAPIRouter(APIRouter):
             if filters:
                 for key in dict.keys(filters):
                     val = dict.get(filters, key, None)
-                    if key in collection.__fields__ and val is not None:
+                    if (
+                        key in collection.__fields__
+                        and key not in collection.__exclude_fields__
+                        and val is not None
+                    ):
                         query = query.filter(getattr(collection, key) == val)
             collection_results = query.all()
             return collection_results
@@ -140,7 +147,7 @@ class CollectionsAPIRouter(APIRouter):
             inspect.Parameter(
                 collection.__tablename__,
                 inspect.Parameter.KEYWORD_ONLY,
-                annotation=collection,
+                annotation=collection.input_model(),
             ),
             inspect.Parameter(
                 "db",
@@ -150,7 +157,6 @@ class CollectionsAPIRouter(APIRouter):
             ),
         ]
         sig = inspect.Signature(parameters=params)
-        print(sig)
 
         async def _base_create_resource(**kwargs):
             # put controls on the function the old fashioned way
@@ -159,7 +165,10 @@ class CollectionsAPIRouter(APIRouter):
                     f"_base_create_resource only accepts two keyword arguments"
                 )
             db = kwargs.pop("db")
-            resource = list(dict.values(kwargs))[0]
+            # this makes saves work
+            resource_values = list(dict.values(kwargs))[0].dict()
+            resource_values["created_at"] = datetime.now()
+            resource = collection(**resource_values)
             db.add(resource)
             db.commit()
             db.refresh(resource)
@@ -189,20 +198,34 @@ class CollectionsAPIRouter(APIRouter):
         ]
         sig = inspect.Signature(parameters=params)
 
-        async def _base_update_resource(
-            id_: int, resource: collection, db: Session = Depends(get_db)
-        ):
+        async def _base_update_resource(**kwargs):
+            # put controls on the function the old fashioned way
+            if len(kwargs) > 3:
+                raise ValueError(
+                    f"_base_update_resource only accepts two keyword arguments"
+                )
+            db = kwargs.pop("db")
+            id_ = kwargs.pop("id_")
+            # this makes saves work
+            resource = collection(**list(dict.values(kwargs))[0].dict())
+
             existing_resource = db.get(collection, id_)
             if existing_resource:
                 if is_replace:
-                    db.update(resource)
+                    db.add(resource)
                 else:
-                    for key in dict.keys(resource):
-                        setattr(existing_resource, key, resource[key])
+                    resource_values = resource.dict(exclude_unset=True)
+                    for key, value in resource_values.items():
+                        if value is not None:
+                            setattr(existing_resource, key, value)
+                    db.add(existing_resource)
                 db.commit()
                 # session.refresh(resource)
                 return resource
-            raise ValueError(f"{collection} with id {id_} not found")
+            raise HTTPException(
+                status_code=404,
+                detail=f"{singularize(collection.__name__)}:{id_} not found",
+            )
 
         _base_update_resource.__signature__ = sig
         _base_update_resource.__name__ = f"update_{collection.__tablename__}"
@@ -214,9 +237,13 @@ class CollectionsAPIRouter(APIRouter):
             resource = db.get(collection, id_)
             if resource:
                 resource.deleted_at = datetime.utcnow()
-                db.update(resource)
+                db.add(resource)
                 db.commit()
                 return {"message": f"{collection} soft deleted"}
+            raise HTTPException(
+                status_code=404,
+                detail=f"{singularize(collection.__name__)}:{id_} not found",
+            )
 
         delete_resource.__name__ = f"delete_{collection.__tablename__}"
 
