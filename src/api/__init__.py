@@ -3,22 +3,13 @@ from datetime import datetime
 from typing import Iterable, List
 
 from fastapi import Depends, HTTPException
-from fastapi.routing import APIRoute, APIRouter
+from fastapi.routing import APIRouter
 from inflection import dasherize, pluralize, singularize
-from pydantic import ValidationError
+from sqlalchemy.exc import DataError, IntegrityError
 from sqlmodel import Session
-from sqlalchemy.exc import IntegrityError, DataError
 
 from ..db import get_db
-from ..models import BaseModel
-
-
-def custom_generate_unique_id(route: APIRoute):
-    parts = [route.name]
-    parts.extend(route.methods)
-    parts.extend(route.tags)
-
-    return "_".join(parts)
+from ..models.base import BaseModel
 
 
 class CollectionsAPIRouter(APIRouter):
@@ -41,7 +32,6 @@ class CollectionsAPIRouter(APIRouter):
             summary=f"Get all {plural_name}",
             description=f"Get all {plural_name}",
             tags=[collection_name],
-            # generate_unique_id_function=custom_generate_unique_id,
         )
         self.add_api_route(
             f"/{collection_name}/{{id_}}",
@@ -52,7 +42,6 @@ class CollectionsAPIRouter(APIRouter):
             summary=f"Get {single_name} by id",
             description=f"Get {single_name} by id",
             tags=[collection_name],
-            # generate_unique_id_function=custom_generate_unique_id,
         )
         self.add_api_route(
             f"/{collection_name}/",
@@ -63,7 +52,6 @@ class CollectionsAPIRouter(APIRouter):
             summary=f"Create {single_name}",
             description=f"Create {single_name}",
             tags=[collection_name],
-            # generate_unique_id_function=custom_generate_unique_id,
         )
         self.add_api_route(
             f"/{collection_name}/{{id_}}",
@@ -194,7 +182,7 @@ class CollectionsAPIRouter(APIRouter):
             inspect.Parameter(
                 collection.__tablename__,
                 inspect.Parameter.POSITIONAL_OR_KEYWORD,
-                annotation=collection,
+                annotation=collection.input_model(),
             ),
             inspect.Parameter(
                 "db",
@@ -214,7 +202,7 @@ class CollectionsAPIRouter(APIRouter):
             db: Session = kwargs.pop("db")
             id_ = kwargs.pop("id_")
             # this deserializes the input data into the model for this collection
-            resource = collection(**list(dict.values(kwargs))[0].dict())
+            resource = collection(**kwargs[collection.__tablename__].dict())
 
             resource.id = id_
             existing_resource = db.get(collection, id_)
@@ -225,7 +213,6 @@ class CollectionsAPIRouter(APIRouter):
                     exclude_unset=exclude_unset, exclude_defaults=True
                 )
                 for key, value in resource_values.items():
-                    print(key, value)
                     if value is not None:
                         setattr(existing_resource, key, value)
                 db.add(existing_resource)
