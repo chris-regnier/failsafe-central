@@ -5,7 +5,9 @@ from typing import Iterable, List
 from fastapi import Depends, HTTPException
 from fastapi.routing import APIRoute, APIRouter
 from inflection import dasherize, pluralize, singularize
+from pydantic import ValidationError
 from sqlmodel import Session
+from sqlalchemy.exc import IntegrityError, DataError
 
 from ..db import get_db
 from ..models import BaseModel
@@ -125,6 +127,7 @@ class CollectionsAPIRouter(APIRouter):
                         and val is not None
                     ):
                         query = query.filter(getattr(collection, key) == val)
+            query = query.filter(collection.deleted_at == None)
             collection_results = query.all()
             return collection_results
 
@@ -136,6 +139,10 @@ class CollectionsAPIRouter(APIRouter):
     def _collection_get_one(self, collection: BaseModel):
         async def get_resource(id_: int, db: Session = Depends(get_db)):
             resource = db.get(collection, id_)
+            if resource.deleted_at is not None:
+                raise HTTPException(
+                    status_code=404, detail=f"{collection.__name__}:{id_} not found"
+                )
             return resource
 
         get_resource.__name__ = f"get_{collection.__tablename__}_by_id"
@@ -204,24 +211,30 @@ class CollectionsAPIRouter(APIRouter):
                 raise ValueError(
                     f"_base_update_resource only accepts two keyword arguments"
                 )
-            db = kwargs.pop("db")
+            db: Session = kwargs.pop("db")
             id_ = kwargs.pop("id_")
-            # this makes saves work
+            # this deserializes the input data into the model for this collection
             resource = collection(**list(dict.values(kwargs))[0].dict())
 
+            resource.id = id_
             existing_resource = db.get(collection, id_)
-            if existing_resource:
-                if is_replace:
-                    db.add(resource)
-                else:
-                    resource_values = resource.dict(exclude_unset=True)
-                    for key, value in resource_values.items():
-                        if value is not None:
-                            setattr(existing_resource, key, value)
-                    db.add(existing_resource)
-                db.commit()
-                # session.refresh(resource)
-                return resource
+
+            if existing_resource and existing_resource.deleted_at == None:
+                exclude_unset = False if is_replace else True
+                resource_values = resource.dict(
+                    exclude_unset=exclude_unset, exclude_defaults=True
+                )
+                for key, value in resource_values.items():
+                    print(key, value)
+                    if value is not None:
+                        setattr(existing_resource, key, value)
+                db.add(existing_resource)
+                try:
+                    db.commit()
+                except (IntegrityError, DataError) as e:
+                    raise HTTPException(status_code=422, detail=str(e))
+                db.refresh(existing_resource)
+                return existing_resource
             raise HTTPException(
                 status_code=404,
                 detail=f"{singularize(collection.__name__)}:{id_} not found",
