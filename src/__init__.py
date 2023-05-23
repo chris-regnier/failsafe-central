@@ -1,19 +1,14 @@
 from fastapi import FastAPI
 
-from .api import CollectionsAPIRouter
-from .models.process import Cause, Effect, Failure
-from .models.projects import Project, Role, Team, User
-from .models.reference import Detection, Impact, Likelihood, Severity
+from .api.reference import ReferenceRouter
+from .api.process import ProcessRouter
+from .api.projects import ProjectsRouter
 
 App = FastAPI()
 routers = [
-    CollectionsAPIRouter(
-        [Severity, Likelihood, Detection, Impact],
-        prefix="/reference",
-        tags=["reference"],
-    ),
-    CollectionsAPIRouter([Team, Project, User, Role], prefix="/projects"),
-    CollectionsAPIRouter([Failure, Cause, Effect], prefix="/processes"),
+    ReferenceRouter,
+    ProjectsRouter,
+    ProcessRouter,
 ]
 
 for router in routers:

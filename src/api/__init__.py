@@ -13,13 +13,16 @@ from ..models.base import BaseModel
 
 
 class CollectionsAPIRouter(APIRouter):
-    def __init__(self, collections: Iterable[BaseModel], *args, **kwargs):
+    def __init__(self, collections: Iterable[BaseModel] = [], *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.collections = collections
-        for collection in self.collections:
+        self.collections = set()
+        for collection in collections:
             self.add_collection(collection)
 
     def add_collection(self, collection: BaseModel):
+        if collection in self.collections:
+            raise ValueError(f"Collection {collection} already added.")
+        self.collections.add(collection)
         collection_name = dasherize(collection.__tablename__)
         plural_name = pluralize(collection.__name__)
         single_name = collection.__name__
