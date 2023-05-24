@@ -2,8 +2,9 @@
 Contains the ``projects`` API blueprint.
 """
 
+from framework.controller import CollectionsAPIRouter
+
 from ..models.projects import Project, Role, Team, User
-from . import CollectionsAPIRouter
 
 ProjectsRouter = CollectionsAPIRouter(
     prefix="/projects",

@@ -1,4 +1,4 @@
-from .base import BaseModel, BaseDescriptorModel
+from framework.model import BaseDescriptorModel
 
 
 class Failure(BaseDescriptorModel, table=True):

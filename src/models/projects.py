@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Optional
 from sqlmodel import Field
 
-from .base import BaseModel, BaseDescriptorModel
+from framework.model import BaseModel, BaseDescriptorModel
 
 
 class Team(BaseDescriptorModel, table=True):

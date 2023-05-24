@@ -2,8 +2,9 @@
 Contains the ``reference`` API blueprint.
 """
 
+from framework.controller import CollectionsAPIRouter
+
 from ..models.reference import Detection, Impact, Likelihood, Severity
-from . import CollectionsAPIRouter
 
 ReferenceRouter = CollectionsAPIRouter(
     prefix="/reference",

@@ -1,4 +1,4 @@
-from .base import BaseModel
+from framework.model import BaseModel
 
 class BaseRankModel(BaseModel):
     name: str

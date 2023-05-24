@@ -4,12 +4,16 @@ from .api.reference import ReferenceRouter
 from .api.process import ProcessRouter
 from .api.projects import ProjectsRouter
 
-App = FastAPI()
-routers = [
-    ReferenceRouter,
-    ProjectsRouter,
-    ProcessRouter,
-]
 
-for router in routers:
-    App.include_router(router)
+def get_app() -> FastAPI:
+    """
+    FastAPI application factory.
+    """
+    app = FastAPI()
+    for router in [
+        ReferenceRouter,
+        ProjectsRouter,
+        ProcessRouter,
+    ]:
+        app.include_router(router)
+    return app

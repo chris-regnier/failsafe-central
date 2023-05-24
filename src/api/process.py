@@ -2,8 +2,9 @@
 Contains the ``process`` API blueprint.
 """
 
+from framework.controller import CollectionsAPIRouter
+
 from ..models.process import Cause, Effect, Failure
-from . import CollectionsAPIRouter
 
 ProcessRouter = CollectionsAPIRouter(
     prefix="/process",
