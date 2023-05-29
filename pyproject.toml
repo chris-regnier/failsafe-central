@@ -20,9 +20,11 @@ inflection = "^0.5.1"
 asyncpg = "^0.27.0"
 
 [tool.poetry.dev-dependencies]
-pytest = "^7.3.1"
+pytest = {extras = ["cov"], version = "^7.3.1"}
 httpx = "^0.24.0"
 polyfactory = "^2.1.1"
+coverage = "^7.2.6"
+pytest-cov = "^4.1.0"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
@@ -31,3 +33,4 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+addopts = ["--cov=src", "--cov-report=term-missing"]

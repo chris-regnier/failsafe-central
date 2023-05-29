@@ -5,11 +5,12 @@ from .api.process import ProcessRouter
 from .api.projects import ProjectsRouter
 
 
-def get_app() -> FastAPI:
+def get_app(app: FastAPI = None) -> FastAPI:
     """
     FastAPI application factory.
     """
-    app = FastAPI()
+    if app is None:
+        app = FastAPI()
     for router in [
         ReferenceRouter,
         ProjectsRouter,
