@@ -42,7 +42,10 @@ def postgresql_service():
     # Wait for the container to be ready
     for i in range(30):
         if not is_postgres_ready("127.0.0.1", 5432):
+            if i == 29:
+                raise Exception("Postgres is not ready")
             time.sleep(1)
+        continue
     # Setup the environment variables
     postgresql_url = f"postgresql://postgres:postgres@127.0.0.1:5432/postgres"
     os.environ["FAILSAFE_DB_URL"] = postgresql_url

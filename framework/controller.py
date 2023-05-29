@@ -1,6 +1,6 @@
 import inspect
 from datetime import datetime
-from typing import Iterable, List
+from typing import Callable, Iterable, List
 
 from fastapi import Depends, HTTPException
 from fastapi.routing import APIRouter
@@ -8,14 +8,21 @@ from inflection import dasherize, pluralize, singularize
 from sqlalchemy.exc import DataError, IntegrityError
 from sqlmodel import Session
 
-from .database import get_db
+from .database import get_db as default_get_db
 from .model import BaseModel
 
 
 class CollectionsAPIRouter(APIRouter):
-    def __init__(self, collections: Iterable[BaseModel] = [], *args, **kwargs):
+    def __init__(
+        self,
+        collections: Iterable[BaseModel] = [],
+        get_db: Callable = None,
+        *args,
+        **kwargs,
+    ):
         super().__init__(*args, **kwargs)
         self.collections = set()
+        self.get_db = get_db or Depends(default_get_db)
         for collection in collections:
             self.add_collection(collection)
 
@@ -102,12 +109,12 @@ class CollectionsAPIRouter(APIRouter):
                 "db",
                 inspect.Parameter.POSITIONAL_OR_KEYWORD,
                 annotation=Session,
-                default=Depends(get_db),
+                default=self.get_db,
             )
         )
         sig = inspect.Signature(parameters=params)
 
-        async def _base_get_resource(db: Session = Depends(get_db), **filters):
+        async def _base_get_resource(db: Session = self.get_db, **filters):
             query = db.query(collection)
             if filters:
                 for key in dict.keys(filters):
@@ -128,7 +135,7 @@ class CollectionsAPIRouter(APIRouter):
         return _base_get_resource
 
     def _collection_get_one(self, collection: BaseModel):
-        async def get_resource(id_: int, db: Session = Depends(get_db)):
+        async def get_resource(id_: int, db: Session = self.get_db):
             resource = db.get(collection, id_)
             if resource.deleted_at is not None:
                 raise HTTPException(
@@ -151,7 +158,7 @@ class CollectionsAPIRouter(APIRouter):
                 "db",
                 inspect.Parameter.KEYWORD_ONLY,
                 annotation=Session,
-                default=Depends(get_db),
+                default=self.get_db,
             ),
         ]
         sig = inspect.Signature(parameters=params)
@@ -191,7 +198,7 @@ class CollectionsAPIRouter(APIRouter):
                 "db",
                 inspect.Parameter.POSITIONAL_OR_KEYWORD,
                 annotation=Session,
-                default=Depends(get_db),
+                default=self.get_db,
             ),
         ]
         sig = inspect.Signature(parameters=params)
@@ -236,7 +243,7 @@ class CollectionsAPIRouter(APIRouter):
         return _base_update_resource
 
     def _collection_delete(self, collection: BaseModel):
-        async def delete_resource(id_: int, db: Session = Depends(get_db)):
+        async def delete_resource(id_: int, db: Session = self.get_db):
             resource = db.get(collection, id_)
             if resource:
                 resource.deleted_at = datetime.utcnow()

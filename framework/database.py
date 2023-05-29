@@ -6,6 +6,8 @@ import os
 from sqlmodel import SQLModel, Session, create_engine
 
 DB_URL = os.getenv("FAILSAFE_DB_URL", "sqlite:///db.sqlite3")
+# DB_URL = os.getenv("FAILSAFE_DB_URL")
+
 
 
 def get_db():

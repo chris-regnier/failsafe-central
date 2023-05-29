@@ -15,11 +15,11 @@ from .test_router import (
 
 def is_mysql_ready(ip: str, port: int) -> bool:
     """Check if MySQL is ready"""
-    import asyncpg
+    import aiomysql
 
     async def check_db():
         try:
-            conn = await asyncpg.connect(
+            conn = await aiomysql.connect(
                 host=ip, port=port, user="mysql", password="mysql"
             )
             await conn.fetch("SELECT 1")
@@ -33,27 +33,24 @@ def is_mysql_ready(ip: str, port: int) -> bool:
 
 @pytest.fixture(scope="session")
 def mysql_service():
-    create_args = "podman run -d -q -p 3306:3306 -e MYSQL_PASSWORD=mysql docker.io/mysql:latest".split(
+    create_args = "podman run -d -q -p 3306:3306 -e MYSQL_ROOT_PASSWORD=secret -e MYSQL_PASSWORD=mysql docker.io/mysql:latest".split(
         " "
     )
     process_result = subprocess.run(args=create_args, text=True, capture_output=True)
     container_id = process_result.stdout.strip()
-    previous_environment = os.environ.get("FAILSAFE_DB_URL", None)
     # Wait for the container to be ready
     for i in range(30):
         if not is_mysql_ready("127.0.0.1", 3306):
+            if i == 29:
+                raise Exception("MySQL is not ready")
             time.sleep(1)
+        continue
     # Setup the environment variables
-    mysqlql_url = f"mysql://mysql:mysql@127.0.0.1:3306/mysql"
-    os.environ["FAILSAFE_DB_URL"] = mysqlql_url
-    yield mysqlql_url
+    mysql_url = f"mysql://mysql:mysql@127.0.0.1:3306/mysql"
+    yield mysql_url
     # Clean up after the test
     delete_args = f"podman rm -f {container_id}".split(" ")
     subprocess.run(delete_args, text=True)
-    if previous_environment is not None:
-        os.environ["FAILSAFE_DB_URL"] = previous_environment
-    else:
-        del os.environ["FAILSAFE_DB_URL"]
 
 
 @pytest.fixture
